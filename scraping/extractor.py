@@ -28,7 +28,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 # -- CONFIG -------------------------------------------------------------------
    # <- change this
 
-TARGET_URL = "https://valorisimo.com/taxes-and-cryptocurrency-in-dubai/"
+TARGET_URL = "https://valorisimo.com/price-per-m2-in-abu-dhabi/"
 TAG        = "THE VALORISIMO VIEW"   # static brand tag
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "new_assets")
 
@@ -120,7 +120,7 @@ SUBLINE: <one clarifying sentence, max 15 words>
 Rules:
 - TAG must always be: THE VALORISIMO VIEW
 - HEADLINE should hook the reader (use a question or bold claim)
-- SUBLINE expands slightly on the headline
+- SUBLINE expands slightly on the headline can be spicy 
 - No extra lines, no explanation, no markdown
 
 Article:

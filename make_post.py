@@ -31,7 +31,7 @@ TAG_TXT_COLOR = (255, 255, 255)
 HEADLINE_COLOR= (255, 255, 255)
 SUBLINE_COLOR = (210, 228, 255)      # slightly tinted white
 
-PHOTO_SPLIT   = 0.52                 # photo starts this far down (0–1)
+PHOTO_SPLIT   = 0.42                 # photo starts this far down (0–1)
 PADDING       = 64                   # left/right margin in px
 TAG_RADIUS    = 22                   # pill corner radius
 LOGO_MAX_W    = 130                  # logo is resized to fit this width
