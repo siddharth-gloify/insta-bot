@@ -2,15 +2,18 @@
 venv/
 .venv/
 env/
-
-.claude/ 
-
-# Output image
-post.png
+.env
 
 
 
-# Fonts (large binary files — add your own locally)
+# Claude
+.claude/
+
+# Output (generated files)
+output/
+new_assets/
+
+# Fonts (large binaries — add your own locally)
 fonts/
 
 # Python
@@ -26,5 +29,3 @@ Thumbs.db
 .vscode/
 .idea/
 *.cursor
-
-.claude

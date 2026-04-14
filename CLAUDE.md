@@ -2,21 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Folder Structure
+
+```
+assets/      ← source photo (image.png), brand logo (logo.png), post text (inpost.txt)
+fonts/       ← drop custom .ttf files here (gitignored)
+output/      ← generated post.png lands here (gitignored)
+make_post.py ← single script, all logic lives here
+```
+
 ## Commands
 
 ```bash
-# Run the post generator (uses defaults: inpost.txt, image.png, logo.png → post.png)
+# Run with defaults (assets/* → output/post.png)
 venv/Scripts/python.exe make_post.py
 
-# Override any input/output file
-venv/Scripts/python.exe make_post.py --text inpost.txt --image image.png --logo logo.png --out post.png
+# Override any path
+venv/Scripts/python.exe make_post.py --text assets/inpost.txt --image assets/image.png --logo assets/logo.png --out output/post.png
 ```
 
 ## Architecture
 
 This is a single-file script (`make_post.py`) that generates a 1080×1080 Instagram post image using Pillow.
 
-**Pipeline**: `inpost.txt` + `image.png` + `logo.png` → `post.png`
+**Pipeline**: `assets/inpost.txt` + `assets/image.png` + `assets/logo.png` → `output/post.png`
 
 1. Parses `inpost.txt` for three fields: `TAG`, `HEADLINE`, `SUBLINE`
 2. Builds a canvas with a solid `BRAND_BLUE` background
@@ -30,4 +39,4 @@ This is a single-file script (`make_post.py`) that generates a 1080×1080 Instag
 
 ## Custom Fonts
 
-Place `.ttf` files in a `fonts/` subdirectory next to `make_post.py`. Expected names: `Poppins-Bold.ttf`, `Poppins-Medium.ttf`, `Poppins-Regular.ttf` (or `Inter-*` equivalents). Free download: https://fonts.google.com/specimen/Poppins
+Place `.ttf` files in the `fonts/` directory. Expected names: `Poppins-Bold.ttf`, `Poppins-Medium.ttf`, `Poppins-Regular.ttf` (or `Inter-*` equivalents). Free download: https://fonts.google.com/specimen/Poppins

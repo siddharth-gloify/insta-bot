@@ -1,8 +1,8 @@
 """
 make_post.py — Instagram Post Generator
 ========================================
-Reads inpost.txt, image.png, logo.png
-Outputs post.png (1080x1080)
+Reads assets/inpost.txt, assets/image.png, assets/logo.png
+Outputs output/post.png (1080x1080)
 
 inpost.txt format:
 ------------------
@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 # ── SETTINGS ────────────────────────────────────────────────────────────────
 
-CANVAS_SIZE   = (1080, 1580)
+CANVAS_SIZE   = (1080, 1380)
 BRAND_BLUE    = (30, 100, 220)       # main background colour
 TAG_BG_COLOR  = (180, 140, 60)       # gold/bronze pill
 TAG_TXT_COLOR = (255, 255, 255)
@@ -233,10 +233,10 @@ def make_post(text_file, image_file, logo_file, output_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate an Instagram post image.")
-    parser.add_argument("--text",  default="inpost.txt",  help="Path to text file")
-    parser.add_argument("--image", default="image.png",   help="Path to source photo")
-    parser.add_argument("--logo",  default="logo.png",    help="Path to logo PNG")
-    parser.add_argument("--out",   default="post.png",    help="Output filename")
+    parser.add_argument("--text",  default="assets/inpost.txt",  help="Path to text file")
+    parser.add_argument("--image", default="assets/image.png",   help="Path to source photo")
+    parser.add_argument("--logo",  default="assets/logo.png",    help="Path to logo PNG")
+    parser.add_argument("--out",   default="output/post.png",    help="Output filename")
     args = parser.parse_args()
 
     for f, label in [(args.text, "text file"), (args.image, "image"), (args.logo, "logo")]:
