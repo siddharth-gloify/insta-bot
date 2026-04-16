@@ -12,6 +12,7 @@ env/
 # Output (generated files)
 output/
 new_assets/
+dump_outputs/
 
 # Fonts (large binaries — add your own locally)
 fonts/

@@ -28,7 +28,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 # -- CONFIG -------------------------------------------------------------------
    # <- change this
 
-TARGET_URL = "https://valorisimo.com/price-per-m2-in-abu-dhabi/"
+TARGET_URL = "https://news.google.com/rss/articles/CBMiyAFBVV95cUxPTndxbWZINm1IMFRGM216TnJqR1FKekFsbXplUGVqcGlROWFtWDdLVXktN3RFQkpqNlhNTFBGcWhrempmVGQ2UGxZeldSZ2E4Z1lJTi00b0M5VGlCX1dIUXZKdzNxcWdMa2lfTGVNdUlrNnpsdG1rcWlCUnJrUFNhc2hhNFJTRFdFUGppMmNuel8zMnpCZXkzYjJSNS1mWVo1WmpNejdMUDQzY0Zva3F4MGsyQVRuaUpkaFRDUlZSQjdiRmpTZS1rbdIBzgFBVV95cUxOSGJhZnBwX3gwS1VGV2wybV9GRkFDTjEzaEJON3pLNDkzREdMaENzRDhYR0JyME1iQmVqU2p3aFdBQnRid3Bod0lVZ1BXWlhoUDZYa29pWmNvZXFrN05vU1pNTXJHTkdqM2trZHcyUVJYLVZGSUYyZnNqcDM0WFhjMWdPZFJxNVBydWV5c00ya0JLTzhndFozSjU3VU1BRW5rU1A5S29GeUVHQTl5ZlNCZXBXYmZ5My11UHFwLTRCZHlDQUlPUmlOSU1zbmlSdw?oc=5"
 TAG        = "THE VALORISIMO VIEW"   # static brand tag
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "new_assets")
 
@@ -49,8 +49,6 @@ HEADERS = {
     )
 }
 
-SKIP_WORDS = [".svg", "icon", "logo", "avatar", "pixel", "1x1", "flag", "emoji", "facebook.com"]
-
 # -- HELPERS ------------------------------------------------------------------
 
 def fetch_page(url):
@@ -69,101 +67,142 @@ def extract_text(soup, max_paragraphs=5):
             break
     return "\n\n".join(paragraphs)
 
-def download_image(soup, base_url, save_path):
-    """Find the first large enough image, convert to PNG and save."""
-    from urllib.parse import urlparse
+def fetch_pexels_image(query, save_path):
+    """
+    Search Pexels for `query`, pick a random photo from the results.
+    Returns True on success, False on failure.
+    """
+    import random
 
-    for img in soup.find_all("img"):
-        src = (img.get("src") or img.get("data-src") or "").strip()
-        if not src:
-            continue
+    api_key = os.getenv("PEXELS_API_KEY")
+    if not api_key:
+        print("  PEXELS_API_KEY not set in .env")
+        return False
 
-        # Normalise URL
-        if src.startswith("//"):
-            src = "https:" + src
-        elif src.startswith("/"):
-            parsed = urlparse(base_url)
-            src = f"{parsed.scheme}://{parsed.netloc}{src}"
-        elif not src.startswith("http"):
-            continue
+    try:
+        # fetch 15 results and pick one at random so each run gets a fresh image
+        resp = requests.get(
+            "https://api.pexels.com/v1/search",
+            headers={"Authorization": api_key},
+            params={"query": query, "per_page": 15, "orientation": "landscape"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        photos = resp.json().get("photos", [])
+        if not photos:
+            print(f"  Pexels: no results for '{query}'")
+            return False
 
-        if any(w in src.lower() for w in SKIP_WORDS):
-            continue
+        photo   = random.choice(photos)
+        img_url = photo["src"].get("original") or photo["src"]["large2x"]
+        img_resp = requests.get(img_url, timeout=30)
+        img_resp.raise_for_status()
 
-        try:
-            img_resp = requests.get(src, headers=HEADERS, timeout=15)
-            img_resp.raise_for_status()
-            if "image" not in img_resp.headers.get("Content-Type", ""):
-                continue
-            if len(img_resp.content) < 5_000:
-                continue
+        img = Image.open(io.BytesIO(img_resp.content)).convert("RGB")
+        img.save(save_path, "PNG")
+        print(f"  Pexels image [{img.width}x{img.height}] (id:{photo['id']}) -> {save_path}")
+        return True
 
-            # Convert any format (jpg, webp, ...) to PNG via Pillow
-            image = Image.open(io.BytesIO(img_resp.content)).convert("RGB")
-            image.save(save_path, "PNG")
-            print(f"  Image saved -> {save_path}")
-            return True
-        except Exception:
-            continue
-
-    return False
+    except Exception as e:
+        print(f"  Pexels fetch failed: {e}")
+        return False
 
 def summarise(text):
-    """Ask the LLM to return TAG / HEADLINE / SUBLINE."""
+    """
+    Ask the LLM to return both EN and FR versions in one call.
+    Returns (english_block, french_block) as strings.
+    """
     prompt = f"""You are a social media content writer for an Instagram page called "THE VALORISIMO VIEW".
 
-Given the article text below, write exactly 3 lines:
+Given the article text below, write exactly 6 lines — first the English version, then the French version.
+
+English:
 TAG: THE VALORISIMO VIEW
 HEADLINE: <one punchy question or statement, max 10 words>
-SUBLINE: <one clarifying sentence, max 15 words>
+SUBLINE: <one clarifying sentence, max 15 words, can be spicy>
+
+French:
+TAG: THE VALORISIMO VIEW
+HEADLINE: <same headline translated into French>
+SUBLINE: <same subline translated into French>
 
 Rules:
-- TAG must always be: THE VALORISIMO VIEW
-- HEADLINE should hook the reader (use a question or bold claim)
-- SUBLINE expands slightly on the headline can be spicy 
-- No extra lines, no explanation, no markdown
+- TAG is always: THE VALORISIMO VIEW  (same in both languages)
+- HEADLINE hooks the reader (question or bold claim)
+- SUBLINE expands on the headline
+- Output exactly 6 lines, no blank lines, no labels, no markdown
 
 Article:
 {text}
 """
     response = client.chat.completions.create(
         model="anthropic/claude-sonnet-4-6",
-        max_tokens=120,
+        max_tokens=200,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.choices[0].message.content.strip()
+    raw = response.choices[0].message.content.strip()
+    lines = [l.strip() for l in raw.splitlines() if l.strip()]
+
+    def to_block(trio):
+        """Ensure lines have TAG/HEADLINE/SUBLINE prefixes for make_post parser."""
+        keys = ["TAG", "HEADLINE", "SUBLINE"]
+        result = []
+        for key, line in zip(keys, trio):
+            # strip any existing prefix the LLM may or may not have included
+            for prefix in [f"{key}:", f"{key} :"]:
+                if line.upper().startswith(prefix.upper()):
+                    line = line[len(prefix):].strip()
+                    break
+            result.append(f"{key}: {line}")
+        return "\n".join(result)
+
+    en_block = to_block(lines[:3])
+    fr_block  = to_block(lines[3:6])
+    return en_block, fr_block
 
 # -- MAIN ---------------------------------------------------------------------
 
-def run():
+def run(url=None, title_hint=None):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    print(f"Fetching: {TARGET_URL}")
-    soup = fetch_page(TARGET_URL)
+    target = url or TARGET_URL
+    print(f"Fetching: {target}")
+    soup = fetch_page(target)
 
-    # 1. Image
-    image_path = os.path.join(OUTPUT_DIR, "image.png")
-    if not download_image(soup, TARGET_URL, image_path):
-        print("No suitable image found on page.")
-        sys.exit(1)
-
-    # 2. Text
+    # 1. Text — scrape page or fall back to RSS title
     text = extract_text(soup, max_paragraphs=5)
     if not text.strip():
-        print("No usable text found on page.")
+        if title_hint:
+            text = title_hint
+            print(f"  No page text — using RSS title as context.")
+        else:
+            print("No usable text found — skipping.")
+            sys.exit(1)
+    print(f"  Text: {text[:80].strip()}...")
+
+    # 2. Image — fetch from Pexels using article headline as search query
+    image_path = os.path.join(OUTPUT_DIR, "image.png")
+    search_query = " ".join(text.split()[:6])
+    if not fetch_pexels_image(search_query, image_path):
+        print("No image — skipping.")
         sys.exit(1)
-    print(f"  Extracted {len(text)} chars of text.")
 
-    # 3. Summarise
+    # 3. Summarise (single LLM call → EN + FR)
     print("  Calling LLM...")
-    summary = summarise(text)
-    print(f"\n{summary}\n")
+    en_block, fr_block = summarise(text)
+    print(f"\n[EN]\n{en_block}\n\n[FR]\n{fr_block}\n")
 
-    # 4. Write inpost.txt
+    # 4. Write inpost.txt (English)
     inpost_path = os.path.join(OUTPUT_DIR, "inpost.txt")
     with open(inpost_path, "w", encoding="utf-8") as f:
-        f.write(summary + "\n")
-    print(f"  inpost.txt saved -> {inpost_path}")
+        f.write(en_block + "\n")
+    print(f"  inpost.txt    saved -> {inpost_path}")
+
+    # 5. Write inpost_fr.txt (French)
+    inpost_fr_path = os.path.join(OUTPUT_DIR, "inpost_fr.txt")
+    with open(inpost_fr_path, "w", encoding="utf-8") as f:
+        f.write(fr_block + "\n")
+    print(f"  inpost_fr.txt saved -> {inpost_fr_path}")
 
 if __name__ == "__main__":
     run()
